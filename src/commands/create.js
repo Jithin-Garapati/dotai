@@ -10,17 +10,18 @@ import { createSkill } from '../lib/skills.js';
 
 /**
  * Read multiline input from stdin until two empty lines or Ctrl+D
+ * Handles large paste operations properly by buffering input
  */
 async function readMultilineInput() {
   return new Promise((resolve) => {
     const lines = [];
     let emptyLineCount = 0;
     
-    // Disable echo by using terminal: false
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
-      terminal: false
+      terminal: process.stdin.isTTY,
+      crlfDelay: Infinity
     });
 
     rl.on('line', (line) => {
@@ -46,6 +47,17 @@ async function readMultilineInput() {
         console.log(chalk.green(`✓ Pasted ${lineCount} lines`));
       }
       resolve(lines.join('\n'));
+    });
+
+    // Handle SIGINT (Ctrl+C) gracefully
+    rl.on('SIGINT', () => {
+      rl.close();
+    });
+
+    // Handle errors
+    rl.on('error', (err) => {
+      console.error(chalk.red(`Input error: ${err.message}`));
+      rl.close();
     });
   });
 }
@@ -104,41 +116,13 @@ function copyToClipboard(text) {
 /**
  * Generate AI prompt for skill creation
  */
-function generateAIPrompt(skillName, description, detailedDescription) {
-  return `Create a SKILL.md file for an AI coding assistant skill with the following specifications:
+function generateAIPrompt(skillName, description, details) {
+  return `Create a SKILL.md for: ${skillName}
+${description}
+${details}
 
-**Skill Name:** ${skillName}
-**Short Description:** ${description}
-
-**What this skill should do:**
-${detailedDescription}
-
----
-
-Please generate a complete SKILL.md file with:
-
-1. **YAML Frontmatter** at the top:
-\`\`\`yaml
----
-name: ${skillName}
-description: ${description}
----
-\`\`\`
-
-2. **Detailed Instructions** including:
-   - When to use this skill (specific scenarios/triggers)
-   - Step-by-step guidance for the AI to follow
-   - Best practices and conventions
-   - Common pitfalls to avoid
-   - Example inputs and expected outputs
-
-3. **Format Requirements:**
-   - Use clear, actionable language
-   - Include code examples where relevant
-   - Keep instructions concise but comprehensive
-   - Use markdown formatting (headers, lists, code blocks)
-
-Generate the complete SKILL.md content now:`;
+Format: YAML frontmatter (name, description) + markdown instructions.
+Keep it short and actionable (under 100 lines).`;
 }
 
 export async function createCommand(name, options) {
@@ -181,62 +165,55 @@ export async function createCommand(name, options) {
     name: 'method',
     message: 'How do you want to write the skill instructions?',
     choices: [
-      { name: 'ai', message: '🤖 Generate with AI (creates prompt for ChatGPT/Claude)' },
+      { name: 'ai', message: '🤖 Generate with AI (ChatGPT, Claude, Gemini, etc)' },
       { name: 'manual', message: '✏️  Write manually (opens editor with template)' }
     ]
   });
 
   if (method === 'ai') {
-    // AI-assisted creation - use the short description as context, ask for more detail
-    const { detailedDescription } = await prompt({
+    const { details } = await prompt({
       type: 'input',
-      name: 'detailedDescription',
-      message: 'What should the AI do with this skill? (be specific):',
-      validate: (value) => value.length > 10 ? true : 'Please provide more detail (at least 10 characters)'
+      name: 'details',
+      message: 'What should this skill do?'
     });
 
-    const aiPrompt = generateAIPrompt(skillName, description, detailedDescription);
-
-    console.log(chalk.bold('\n📋 AI Prompt Generated!\n'));
+    const aiPrompt = generateAIPrompt(skillName, description, details || '');
 
     // Try to copy to clipboard
     const copied = copyToClipboard(aiPrompt);
 
     if (copied) {
-      console.log(chalk.green('✓ Prompt copied to clipboard!\n'));
+      console.log(chalk.green('\n✓ Prompt copied to clipboard!\n'));
     } else {
-      console.log(chalk.yellow('Could not copy to clipboard. Here\'s the prompt:\n'));
-      console.log(chalk.dim('─'.repeat(60)));
+      console.log(chalk.yellow('\nPrompt:\n'));
+      console.log(chalk.dim('─'.repeat(40)));
       console.log(aiPrompt);
-      console.log(chalk.dim('─'.repeat(60)));
+      console.log(chalk.dim('─'.repeat(40)));
     }
 
-    console.log(chalk.bold('Next steps:'));
-    console.log('  1. Paste this prompt into ChatGPT, Claude, or any LLM');
-    console.log('  2. Copy the generated SKILL.md content');
-    console.log('  3. Run this command again and paste the result\n');
+    console.log('Paste into any AI (ChatGPT, Claude, Gemini, etc), then paste the result here.\n');
 
     const { hasContent } = await prompt({
       type: 'confirm',
       name: 'hasContent',
-      message: 'Do you have the AI-generated content ready to paste?',
+      message: 'Ready to paste AI-generated content?',
       initial: false
     });
 
     if (hasContent) {
-      console.log(chalk.dim('\nPaste the SKILL.md content below, then press Enter twice when done:\n'));
+      console.log(chalk.dim('\nPaste content, then press Enter twice:\n'));
 
       // Read multiline input using readline
       const content = await readMultilineInput();
 
       if (content && content.trim()) {
-        const spinner = ora('Creating skill with AI-generated content...').start();
+        const spinner = ora('Creating skill...').start();
         try {
           const result = await createSkill(skillName, description, '');
           // Write the pasted content directly
           await fs.writeFile(result.skillMdPath, content.trim(), 'utf-8');
-          spinner.succeed(chalk.green(`Skill '${skillName}' created with AI content!`));
-          console.log(chalk.dim(`\nLocation: ${result.path}`));
+          spinner.succeed(chalk.green(`Skill '${skillName}' created!`));
+          console.log(chalk.dim(`Location: ${result.path}`));
           console.log(chalk.yellow('\nInstall with:'));
           console.log(`  ${chalk.cyan(`dotai skill install ${skillName}`)}\n`);
         } catch (err) {
@@ -247,9 +224,7 @@ export async function createCommand(name, options) {
         await createWithTemplate(skillName, description);
       }
     } else {
-      console.log(chalk.dim('\nNo problem! When you have the content ready:'));
-      console.log(`  1. Create the skill: ${chalk.cyan(`dotai skill create ${skillName} -d "${description}"`)}`);
-      console.log(`  2. Or manually create: ${chalk.cyan(`~/.dotai/skills/${skillName}/SKILL.md`)}\n`);
+      console.log(chalk.dim(`\nRun again when ready: ${chalk.cyan(`dotai skill create ${skillName}`)}\n`));
     }
   } else {
     // Manual creation
