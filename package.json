@@ -1,6 +1,6 @@
 {
   "name": "dotai-cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Unified CLI for AI coding assistants - manage skills and MCP servers across Claude Code, Gemini CLI, Cursor, VS Code, and more",
   "main": "src/index.js",
   "type": "module",
