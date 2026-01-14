@@ -1,0 +1,54 @@
+{
+  "name": "dotai",
+  "version": "1.0.0",
+  "description": "Unified CLI for AI coding assistants - manage skills and MCP servers across Claude Code, Gemini CLI, Cursor, VS Code, and more",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "dotai": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "link": "npm link"
+  },
+  "keywords": [
+    "ai",
+    "dotfiles",
+    "skills",
+    "mcp",
+    "claude",
+    "claude-code",
+    "gemini",
+    "cursor",
+    "cline",
+    "opencode",
+    "codex",
+    "cli",
+    "agent",
+    "mcp-server",
+    "config"
+  ],
+  "author": "Jithin Garapati",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jithin-garapati/dotai"
+  },
+  "homepage": "https://github.com/jithin-garapati/dotai#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "src/**/*",
+    "README.md"
+  ],
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "enquirer": "^2.4.1",
+    "fs-extra": "^11.2.0",
+    "gray-matter": "^4.0.3",
+    "ora": "^8.0.1",
+    "yaml": "^2.4.1"
+  }
+}
