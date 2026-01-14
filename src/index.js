@@ -10,6 +10,7 @@ import { syncCommand } from './commands/sync.js';
 import { uninstallCommand } from './commands/uninstall.js';
 import { configCommand, enableCommand, disableCommand } from './commands/config.js';
 import { openCommand, openRepoCommand } from './commands/open.js';
+import { mcpAddCommand, mcpListCommand, mcpSyncCommand, mcpRemoveCommand, mcpProvidersCommand } from './commands/mcp.js';
 
 const program = new Command();
 
@@ -19,7 +20,7 @@ await initConfig();
 program
   .name('dotai')
   .description('Dotfiles for AI - manage skills & MCP servers across all your AI coding assistants')
-  .version('1.0.0');
+  .version('1.0.1');
 
 // Skill subcommand
 const skill = program.command('skill').description('Manage AI agent skills');
@@ -69,30 +70,42 @@ skill
   .option('-f, --file', 'Open SKILL.md file directly')
   .action(openCommand);
 
-// MCP subcommand (placeholder for now)
-const mcp = program.command('mcp').description('Manage MCP servers (coming soon)');
+// MCP subcommand
+const mcp = program.command('mcp').description('Manage MCP servers across all apps');
 
 mcp
   .command('add')
-  .description('Add an MCP server (coming soon)')
-  .action(() => {
-    console.log(chalk.yellow('\nMCP management coming soon!\n'));
-    console.log(chalk.dim('This will let you configure MCP servers once and sync to:'));
-    console.log(chalk.dim('  • Claude Code    • Claude Desktop   • Cursor'));
-    console.log(chalk.dim('  • VS Code        • Cline            • Windsurf\n'));
-  });
+  .description('Add an MCP server to your config')
+  .action(mcpAddCommand);
 
 mcp
   .command('list')
-  .description('List MCP servers (coming soon)')
-  .action(() => {
-    console.log(chalk.yellow('\nMCP management coming soon!\n'));
-  });
+  .alias('ls')
+  .description('List configured MCP servers')
+  .option('-v, --verbose', 'Show sync status')
+  .action(mcpListCommand);
+
+mcp
+  .command('sync')
+  .description('Sync MCP servers to all apps')
+  .option('-p, --providers <list>', 'Comma-separated list of providers')
+  .action(mcpSyncCommand);
+
+mcp
+  .command('remove [server]')
+  .description('Remove an MCP server')
+  .option('-y, --yes', 'Skip confirmation')
+  .action(mcpRemoveCommand);
+
+mcp
+  .command('providers')
+  .description('List supported MCP apps')
+  .action(mcpProvidersCommand);
 
 // Config commands
 program
   .command('providers')
-  .description('List all supported providers')
+  .description('List all supported skill providers')
   .action(listProvidersCommand);
 
 program
@@ -122,7 +135,7 @@ program.parse();
 if (!process.argv.slice(2).length) {
   console.log(chalk.bold(`
   ╔═══════════════════════════════════════════════════════════╗
-  ║                        dotai v1.0.0                       ║
+  ║                        dotai v1.0.1                       ║
   ║         Dotfiles for AI - Skills & MCP in one place       ║
   ╚═══════════════════════════════════════════════════════════╝
   `));
@@ -133,9 +146,10 @@ if (!process.argv.slice(2).length) {
   console.log(`    ${chalk.cyan('dotai skill list')}           List your skills`);
   console.log(`    ${chalk.cyan('dotai skill sync')}           Sync all skills\n`);
 
-  console.log(chalk.bold('  MCP Servers - coming soon:'));
-  console.log(`    ${chalk.dim('dotai mcp add')}              Add an MCP server`);
-  console.log(`    ${chalk.dim('dotai mcp sync')}             Sync to all apps\n`);
+  console.log(chalk.bold('  MCP Servers - sync across Claude, Cursor, VS Code & more:'));
+  console.log(`    ${chalk.cyan('dotai mcp add')}              Add an MCP server`);
+  console.log(`    ${chalk.cyan('dotai mcp list')}             List your servers`);
+  console.log(`    ${chalk.cyan('dotai mcp sync')}             Sync to all apps\n`);
 
   console.log(chalk.dim('  Run "dotai --help" for all commands\n'));
 }
