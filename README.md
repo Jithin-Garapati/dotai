@@ -3,7 +3,7 @@
 **Dotfiles for AI** - Manage skills and MCP servers across all your AI coding assistants from one place.
 
 ```bash
-npm install -g dotai
+npm install -g dotai-cli
 ```
 
 ## Why dotai?
